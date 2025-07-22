@@ -69,6 +69,8 @@ app.ticker.add(() => {
   }
 });
 
+let spinButton;
+
 function showGameScreen() {
   const gridRows = 3;
   const gridCols = 5;
@@ -91,16 +93,8 @@ function showGameScreen() {
       const symbolIndex = (basePos + row) % band.length;
       const symbolName = band[symbolIndex];
       const texture = PIXI.Assets.get(symbolName);
-      console.log(`Symbol: ${symbolName}, Texture found:`, !!texture);
-
-     // const texture = PIXI.Assets.get(symbolName);
-
-      if (!texture) {
-        console.warn(`Missing texture for symbol: ${symbolName}`);
-        continue;
-      }
-
       const sprite = new PIXI.Sprite(texture);
+
       sprite.width = symbolSize;
       sprite.height = symbolSize;
       sprite.x = startX + col * (symbolSize + spacing);
@@ -111,4 +105,32 @@ function showGameScreen() {
     }
     symbolGrid.push(rowSprites);
   }
+
+  const spinTexture = PIXI.Assets.get('spin_button');
+  spinButton = new PIXI.Sprite(spinTexture);
+  spinButton.anchor.set(0.5);
+  spinButton.scale.set(0.5);
+  spinButton.x = app.screen.width / 2;
+  spinButton.y = startY + totalHeight + 60;
+
+  spinButton.interactive = true;
+  spinButton.buttonMode = true;
+  spinButton.on('pointerdown', spinReels);
+
+  app.stage.addChild(spinButton);
 }
+
+function spinReels() {
+  for (let i = 0; i < currentPositions.length; i++) {
+    currentPositions[i] = (currentPositions[i] + 1) % reelset[i].length;
+  }
+
+  for (let row of symbolGrid) {
+    for (let sprite of row) {
+      app.stage.removeChild(sprite);
+    }
+  }
+
+  showGameScreen();
+}
+
