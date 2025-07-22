@@ -3,7 +3,7 @@ console.log("Script test run check");
 const app = new PIXI.Application({
   width: window.innerWidth,
   height: window.innerHeight,
-  backgroundColor: 0x000000,
+  backgroundColor: 0x1099bb,
   resizeTo: window
 });
 
@@ -61,7 +61,7 @@ app.ticker.add(() => {
   if (displayProgress === 100 && app.stage.children.includes(loadingText)) {
     setTimeout(() => {
       app.stage.removeChild(loadingText);
-      console.log("Calling showGameScreen...");
+      console.log("Calling showGameScreen check");
     showGameScreen();
 
     //  showGameScreen();
