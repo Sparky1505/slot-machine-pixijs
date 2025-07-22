@@ -32,14 +32,27 @@ symbolNames.forEach(name => {
   PIXI.Assets.add(name, `assets/symbols/${fileName}`);
 });
 
+let displayProgress = 0;
+let actualProgress = 0;
+
 PIXI.Assets.load(symbolNames, (progress) => {
-  loadingText.text = `Loading... ${Math.floor(progress * 100)}%`;
+  actualProgress = Math.floor(progress * 100);
 }).then(() => {
-  loadingText.text = 'Loading... 100%';
-  setTimeout(() => {
-    app.stage.removeChild(loadingText);
-    showGameScreen();
-  }, 500);
+  actualProgress = 100;
+});
+
+app.ticker.add(() => {
+  if (displayProgress < actualProgress) {
+    displayProgress += 4;
+    loadingText.text = `Loading... ${displayProgress}%`;
+  }
+
+  if (displayProgress === 100 && app.stage.children.includes(loadingText)) {
+    setTimeout(() => {
+      app.stage.removeChild(loadingText);
+      showGameScreen();
+    }, 500);
+  }
 });
 
 function showGameScreen() {
