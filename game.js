@@ -244,11 +244,52 @@ function showSpinButton(x, y) {
 }
 
 function spinReels() {
+  const newPositions = [];
+
   for (let i = 0; i < currentPositions.length; i++) {
-    currentPositions[i] = Math.floor(Math.random() * reelset[i].length);
+    newPositions[i] = Math.floor(Math.random() * reelset[i].length);
   }
+
+  animateReels(newPositions);
   showGameScreen();
 }
+
+function animateReels(newPositions) {
+  const spinDuration = 1000;
+  const startTime = performance.now();
+  const initialPositions = [...currentPositions];
+
+  function updateAnimation(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / spinDuration, 1);
+
+    for (let col = 0; col < symbolGrid[0].length; col++) {
+      const band = reelset[col];
+      const basePos = Math.floor(initialPositions[col] + progress * (newPositions[col] - initialPositions[col])) % band.length;
+
+      for (let row = 0; row < symbolGrid.length; row++) {
+        const symbolIndex = (basePos + row) % band.length;
+        const symbolName = band[symbolIndex];
+        const texture = PIXI.Assets.get(symbolName);
+        const container = symbolGrid[row][col];
+        const sprite = container.children[0];
+        sprite.texture = texture;
+      }
+    }
+
+    if (progress < 1) {
+      requestAnimationFrame(updateAnimation);
+    } else {
+      currentPositions = newPositions;
+      evaluateScreen();
+      evaluateWins();
+      positionText.text = `Positions: [${currentPositions.join(', ')}]`;
+    }
+  }
+
+  requestAnimationFrame(updateAnimation);
+}
+
 
 function evaluateScreen() {
   for (const row of symbolGrid) {
