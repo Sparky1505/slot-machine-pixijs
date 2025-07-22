@@ -3,7 +3,7 @@ console.log("Script test run check");
 const app = new PIXI.Application({
   width: window.innerWidth,
   height: window.innerHeight,
-  backgroundColor: 0x1099bb,
+  backgroundColor: 0x0097a7,
   resizeTo: window
 });
 
@@ -40,10 +40,12 @@ symbolNames.forEach(name => {
   PIXI.Assets.add(name, `assets/symbols/${fileName}`);
 });
 
-let displayProgress = 0;
-let actualProgress = 0;
 let currentPositions = [0, 0, 0, 0, 0];
 let symbolGrid = [];
+let highlightBoxes = [];
+
+let actualProgress = 0;
+let displayProgress = 0;
 
 PIXI.Assets.load(symbolNames, (progress) => {
   actualProgress = Math.floor(progress * 100);
@@ -54,22 +56,16 @@ PIXI.Assets.load(symbolNames, (progress) => {
 app.ticker.add(() => {
   if (displayProgress < actualProgress) {
     displayProgress += 4;
-    if (displayProgress > actualProgress) displayProgress = actualProgress;
     loadingText.text = `Loading... ${displayProgress}%`;
   }
 
   if (displayProgress === 100 && app.stage.children.includes(loadingText)) {
     setTimeout(() => {
       app.stage.removeChild(loadingText);
-      console.log("Calling showGameScreen check");
-    showGameScreen();
-
-    //  showGameScreen();
-    }, 500);
+      showGameScreen();
+    }, 300);
   }
 });
-
-let spinButton;
 
 function showGameScreen() {
   const gridRows = 3;
@@ -84,7 +80,6 @@ function showGameScreen() {
   const startY = (app.screen.height - totalHeight) / 2;
 
   symbolGrid = [];
-
   for (let row = 0; row < gridRows; row++) {
     const rowSprites = [];
     for (let col = 0; col < gridCols; col++) {
@@ -97,6 +92,7 @@ function showGameScreen() {
 
       sprite.width = symbolSize;
       sprite.height = symbolSize;
+
       sprite.x = startX + col * (symbolSize + spacing);
       sprite.y = startY + row * (symbolSize + spacing);
 
@@ -107,30 +103,85 @@ function showGameScreen() {
   }
 
   const spinTexture = PIXI.Assets.get('spin_button');
-  spinButton = new PIXI.Sprite(spinTexture);
+  const spinButton = new PIXI.Sprite(spinTexture);
   spinButton.anchor.set(0.5);
-  spinButton.scale.set(0.5);
+  spinButton.width = 100;
+  spinButton.height = 100;
   spinButton.x = app.screen.width / 2;
-  spinButton.y = startY + totalHeight + 60;
+  spinButton.y = startY + totalHeight + 80;
+  spinButton.eventMode = 'static';
+  spinButton.cursor = 'pointer';
 
-  spinButton.interactive = true;
-  spinButton.buttonMode = true;
   spinButton.on('pointerdown', spinReels);
-
   app.stage.addChild(spinButton);
 }
 
 function spinReels() {
-  for (let i = 0; i < currentPositions.length; i++) {
-    currentPositions[i] = (currentPositions[i] + 1) % reelset[i].length;
-  }
+  currentPositions = currentPositions.map(pos => (pos + 1 + Math.floor(Math.random() * 5)) % 20);
+  clearHighlights();
+  updateSymbols();
+  highlightMatches();
+}
 
-  for (let row of symbolGrid) {
-    for (let sprite of row) {
-      app.stage.removeChild(sprite);
+function updateSymbols() {
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 5; col++) {
+      const band = reelset[col];
+      const basePos = currentPositions[col];
+      const symbolIndex = (basePos + row) % band.length;
+      const symbolName = band[symbolIndex];
+      const texture = PIXI.Assets.get(symbolName);
+      symbolGrid[row][col].texture = texture;
+    }
+  }
+}
+
+function highlightMatches() {
+  const matchedPositions = [];
+
+  for (let row = 0; row < 3; row++) {
+    let count = 1;
+    for (let col = 1; col < 5; col++) {
+      const prevSymbol = getSymbolAt(row, col - 1);
+      const currentSymbol = getSymbolAt(row, col);
+
+      if (prevSymbol === currentSymbol) {
+        count++;
+      } else {
+        if (count >= 3) {
+          for (let k = 0; k < count; k++) {
+            matchedPositions.push([row, col - 1 - k]);
+          }
+        }
+        count = 1;
+      }
+    }
+    if (count >= 3) {
+      for (let k = 0; k < count; k++) {
+        matchedPositions.push([row, 4 - k]);
+      }
     }
   }
 
-  showGameScreen();
+  matchedPositions.forEach(([row, col]) => {
+    const sprite = symbolGrid[row][col];
+    const border = new PIXI.Graphics();
+    border.lineStyle(4, 0xffffff).drawRect(0, 0, sprite.width, sprite.height);
+    border.x = sprite.x;
+    border.y = sprite.y;
+    app.stage.addChild(border);
+    highlightBoxes.push(border);
+  });
 }
 
+function getSymbolAt(row, col) {
+  const band = reelset[col];
+  const basePos = currentPositions[col];
+  const index = (basePos + row) % band.length;
+  return band[index];
+}
+
+function clearHighlights() {
+  highlightBoxes.forEach(b => app.stage.removeChild(b));
+  highlightBoxes = [];
+}
