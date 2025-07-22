@@ -174,6 +174,13 @@ function showGameScreen() {
   evaluateWins();
 }
 
+
+window.addEventListener('resize', () => {
+  app.renderer.resize(window.innerWidth, window.innerHeight);
+  showGameScreen();
+});
+
+
 const paytable = {
   'hv1_symbol': [20, 50, 100],
   'hv2_symbol': [18, 45, 90],
