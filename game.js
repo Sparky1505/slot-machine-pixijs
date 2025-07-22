@@ -1,5 +1,5 @@
 console.log("Script test run check");
-
+let positionText;
 const app = new PIXI.Application({
   width: window.innerWidth,
   height: window.innerHeight,
@@ -42,7 +42,6 @@ symbolNames.forEach(name => {
 
 let currentPositions = [0, 0, 0, 0, 0];
 let symbolGrid = [];
-let highlightBoxes = [];
 
 let actualProgress = 0;
 let displayProgress = 0;
@@ -72,44 +71,63 @@ function showGameScreen() {
   const gridCols = 5;
   const symbolSize = 100;
   const spacing = 10;
-  
+
   const totalWidth = gridCols * (symbolSize + spacing) - spacing;
   const totalHeight = gridRows * (symbolSize + spacing) - spacing;
   const startX = (app.screen.width - totalWidth) / 2;
   const startY = (app.screen.height - totalHeight) / 2;
 
-  if (symbolGrid.length > 0) {
-    for (const row of symbolGrid) {
-      for (const sprite of row) {
-        app.stage.removeChild(sprite);
-      }
-    }
-  }
+  symbolGrid.flat().forEach(container => app.stage.removeChild(container));
+  symbolGrid = [];
 
- symbolGrid = [];
   for (let row = 0; row < gridRows; row++) {
-    const rowSprites = [];
+    const rowContainers = [];
     for (let col = 0; col < gridCols; col++) {
       const band = reelset[col];
       const basePos = currentPositions[col];
       const symbolIndex = (basePos + row) % band.length;
       const symbolName = band[symbolIndex];
       const texture = PIXI.Assets.get(symbolName);
+
+      const container = new PIXI.Container();
       const sprite = new PIXI.Sprite(texture);
+      const border = new PIXI.Graphics();
 
       sprite.width = symbolSize;
       sprite.height = symbolSize;
+      border.lineStyle(3, 0x000000).drawRect(0, 0, symbolSize, symbolSize);
 
-      sprite.x = startX + col * (symbolSize + spacing);
-      sprite.y = startY + row * (symbolSize + spacing);
+      container.addChild(sprite);
+      container.addChild(border);
+      container.x = startX + col * (symbolSize + spacing);
+      container.y = startY + row * (symbolSize + spacing);
+      container.width = symbolSize;
+      container.height = symbolSize;
 
-      app.stage.addChild(sprite);
-      rowSprites.push(sprite);
+      container.border = border;
+      app.stage.addChild(container);
+      rowContainers.push(container);
     }
-    symbolGrid.push(rowSprites);
+    symbolGrid.push(rowContainers);
   }
 
   showSpinButton(startX + totalWidth / 2, startY + totalHeight + 80);
+
+  if (!positionText) {
+    positionText = new PIXI.Text('', {
+      fill: '#ffffff',
+      fontSize: 20,
+      fontFamily: 'Arial',
+      fontWeight: 'bold'
+    });
+    positionText.anchor.set(0.5, 0);
+    app.stage.addChild(positionText);
+  }
+  positionText.text = `Positions: [${currentPositions.join(', ')}]`;
+  positionText.x = app.screen.width / 2;
+  positionText.y = startY - 40;
+  app.stage.setChildIndex(positionText, app.stage.children.length - 1);
+
   evaluateScreen();
 }
 
@@ -164,24 +182,21 @@ function spinReels() {
 
 function evaluateScreen() {
   for (const row of symbolGrid) {
-    for (const sprite of row) {
-      sprite.border.clear();
-    sprite.border.lineStyle(3, 0x000000);
-    sprite.border.drawRect(0, 0, sprite.width, sprite.height);
-
+    for (const container of row) {
+      container.border.clear();
+      container.border.lineStyle(3, 0x000000);
+      container.border.drawRect(0, 0, container.width, container.height);
     }
   }
 
   for (let row = 0; row < 3; row++) {
-    const symbols = symbolGrid[row].map(sprite => sprite.texture.textureCacheIds[0]);
+    const symbols = symbolGrid[row].map(container => container.children[0].texture.textureCacheIds[0]);
     const allSame = symbols.every(sym => sym === symbols[0]);
-
     if (allSame) {
-      for (const sprite of symbolGrid[row]) {
-       sprite.border.clear();
-    sprite.border.lineStyle(4, 0xff0000);
-    sprite.border.drawRect(0, 0, sprite.width, sprite.height);
-
+      for (const container of symbolGrid[row]) {
+        container.border.clear();
+        container.border.lineStyle(4, 0xff0000);
+        container.border.drawRect(0, 0, container.width, container.height);
       }
     }
   }
