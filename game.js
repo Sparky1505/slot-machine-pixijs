@@ -8,6 +8,9 @@ const app = new PIXI.Application({
   backgroundColor: 0x009bb5,
   resizeTo: window
 });
+const blurFilter = new PIXI.filters.BlurFilter();
+blurFilter.blur = 5;
+
 
 document.body.appendChild(app.view);
 
@@ -249,9 +252,22 @@ function spinReels() {
   for (let i = 0; i < currentPositions.length; i++) {
     newPositions[i] = Math.floor(Math.random() * reelset[i].length);
   }
+    for (let row of symbolGrid) {
+    for (let container of row) {
+        container.filters = [blurFilter];
+    }
+    }
 
   animateReels(newPositions);
-  showGameScreen();
+setTimeout(() => {
+  for (let row of symbolGrid) {
+    for (let container of row) {
+      container.filters = null;
+    }
+  }
+
+  showGameScreen(); 
+}, 700);
 }
 
 function animateReels(newPositions) {
