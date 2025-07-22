@@ -3,7 +3,7 @@ console.log("Script test run check");
 const app = new PIXI.Application({
   width: window.innerWidth,
   height: window.innerHeight,
-  backgroundColor: 0x0097a7,
+  backgroundColor: 0x009bb5,
   resizeTo: window
 });
 
@@ -26,8 +26,8 @@ const symbolNames = [
 ];
 
 const reelset = [
-  ["hv2", "lv3", "lv3", "hv1", "hv1", "lv1", "hv1", "hv4", "lv1", "hv3", "hv2", "hv3", "lv4", "hv4", "lv1", "hv2", "lv4", "lv1", "lv3", "hv2"],
-  ["hv1", "lv2", "lv3", "lv2", "lv1", "lv1", "lv4", "lv1", "lv1", "hv4", "lv3", "hv2", "lv1", "lv3", "hv1", "lv1", "lv2", "lv4", "lv3", "lv2"],
+  ["hv2", "lv3", "hv3", "hv1", "hv1", "lv1", "hv1", "hv4", "lv1", "hv3", "hv2", "hv3", "lv4", "hv4", "lv1", "hv2", "lv4", "lv1", "lv3", "hv2"],
+  ["hv1", "lv2", "hv3", "lv2", "lv1", "lv1", "lv4", "lv1", "lv1", "hv4", "lv3", "hv2", "lv1", "lv3", "hv1", "lv1", "lv2", "lv4", "lv3", "lv2"],
   ["lv1", "hv2", "lv3", "lv4", "hv3", "hv2", "lv2", "hv2", "hv2", "lv1", "hv3", "lv1", "hv1", "lv2", "hv3", "hv2", "hv4", "hv1", "lv2", "lv4"],
   ["hv2", "lv2", "hv3", "lv2", "lv4", "lv4", "hv3", "lv2", "lv4", "hv1", "lv1", "hv1", "lv2", "hv3", "lv2", "lv3", "hv2", "lv1", "hv3", "lv2"],
   ["lv3", "lv4", "hv2", "hv3", "hv4", "hv1", "hv3", "hv2", "hv2", "hv4", "hv4", "hv2", "lv2", "hv4", "hv1", "lv2", "hv1", "lv2", "hv4", "lv4"]
@@ -72,14 +72,21 @@ function showGameScreen() {
   const gridCols = 5;
   const symbolSize = 100;
   const spacing = 10;
-
+  
   const totalWidth = gridCols * (symbolSize + spacing) - spacing;
   const totalHeight = gridRows * (symbolSize + spacing) - spacing;
-
   const startX = (app.screen.width - totalWidth) / 2;
   const startY = (app.screen.height - totalHeight) / 2;
 
-  symbolGrid = [];
+  if (symbolGrid.length > 0) {
+    for (const row of symbolGrid) {
+      for (const sprite of row) {
+        app.stage.removeChild(sprite);
+      }
+    }
+  }
+
+ symbolGrid = [];
   for (let row = 0; row < gridRows; row++) {
     const rowSprites = [];
     for (let col = 0; col < gridCols; col++) {
@@ -102,86 +109,80 @@ function showGameScreen() {
     symbolGrid.push(rowSprites);
   }
 
-  const spinTexture = PIXI.Assets.get('spin_button');
-  const spinButton = new PIXI.Sprite(spinTexture);
-  spinButton.anchor.set(0.5);
-  spinButton.width = 100;
-  spinButton.height = 100;
-  spinButton.x = app.screen.width / 2;
-  spinButton.y = startY + totalHeight + 80;
-  spinButton.eventMode = 'static';
-  spinButton.cursor = 'pointer';
+  showSpinButton(startX + totalWidth / 2, startY + totalHeight + 80);
+  evaluateScreen();
+}
 
-  spinButton.on('pointerdown', spinReels);
-  app.stage.addChild(spinButton);
+function showSpinButton(x, y) {
+  const existing = app.stage.getChildByName("spinBtn");
+  if (existing) app.stage.removeChild(existing);
+
+  const graphics = new PIXI.Container();
+  graphics.name = "spinBtn";
+  graphics.x = x;
+  graphics.y = y;
+  graphics.eventMode = 'static';
+  graphics.cursor = 'pointer';
+
+  const outerRing = new PIXI.Graphics();
+  outerRing.beginFill(0x000000);
+  outerRing.drawCircle(0, 0, 61);
+  outerRing.endFill();
+  graphics.addChild(outerRing);
+
+  const middleRing = new PIXI.Graphics();
+  middleRing.beginFill(0xFFD700);
+  middleRing.drawCircle(0, 0, 57);
+  middleRing.endFill();
+  graphics.addChild(middleRing);
+
+  const innerCircle = new PIXI.Graphics();
+  innerCircle.beginFill(0x000000);
+  innerCircle.drawCircle(0, 0, 50);
+  innerCircle.endFill();
+  graphics.addChild(innerCircle);
+
+  const spinText = new PIXI.Text('SPIN', {
+    fill: ['#FFD700', '#FFA500'],
+    fontSize: 28,
+    fontWeight: 'bold',
+    fontFamily: 'Arial'
+  });
+  spinText.anchor.set(0.5);
+  graphics.addChild(spinText);
+
+  graphics.on('pointertap', () => spinReels());
+  app.stage.addChild(graphics);
 }
 
 function spinReels() {
-  currentPositions = currentPositions.map(pos => (pos + 1 + Math.floor(Math.random() * 5)) % 20);
-  clearHighlights();
-  updateSymbols();
-  highlightMatches();
-}
-
-function updateSymbols() {
-  for (let row = 0; row < 3; row++) {
-    for (let col = 0; col < 5; col++) {
-      const band = reelset[col];
-      const basePos = currentPositions[col];
-      const symbolIndex = (basePos + row) % band.length;
-      const symbolName = band[symbolIndex];
-      const texture = PIXI.Assets.get(symbolName);
-      symbolGrid[row][col].texture = texture;
-    }
+  for (let i = 0; i < currentPositions.length; i++) {
+    currentPositions[i] = Math.floor(Math.random() * reelset[i].length);
   }
+  showGameScreen();
 }
 
-function highlightMatches() {
-  const matchedPositions = [];
+function evaluateScreen() {
+  for (const row of symbolGrid) {
+    for (const sprite of row) {
+      sprite.border.clear();
+    sprite.border.lineStyle(3, 0x000000);
+    sprite.border.drawRect(0, 0, sprite.width, sprite.height);
 
-  for (let row = 0; row < 3; row++) {
-    let count = 1;
-    for (let col = 1; col < 5; col++) {
-      const prevSymbol = getSymbolAt(row, col - 1);
-      const currentSymbol = getSymbolAt(row, col);
-
-      if (prevSymbol === currentSymbol) {
-        count++;
-      } else {
-        if (count >= 3) {
-          for (let k = 0; k < count; k++) {
-            matchedPositions.push([row, col - 1 - k]);
-          }
-        }
-        count = 1;
-      }
-    }
-    if (count >= 3) {
-      for (let k = 0; k < count; k++) {
-        matchedPositions.push([row, 4 - k]);
-      }
     }
   }
 
-  matchedPositions.forEach(([row, col]) => {
-    const sprite = symbolGrid[row][col];
-    const border = new PIXI.Graphics();
-    border.lineStyle(4, 0xffffff).drawRect(0, 0, sprite.width, sprite.height);
-    border.x = sprite.x;
-    border.y = sprite.y;
-    app.stage.addChild(border);
-    highlightBoxes.push(border);
-  });
-}
+  for (let row = 0; row < 3; row++) {
+    const symbols = symbolGrid[row].map(sprite => sprite.texture.textureCacheIds[0]);
+    const allSame = symbols.every(sym => sym === symbols[0]);
 
-function getSymbolAt(row, col) {
-  const band = reelset[col];
-  const basePos = currentPositions[col];
-  const index = (basePos + row) % band.length;
-  return band[index];
-}
+    if (allSame) {
+      for (const sprite of symbolGrid[row]) {
+       sprite.border.clear();
+    sprite.border.lineStyle(4, 0xff0000);
+    sprite.border.drawRect(0, 0, sprite.width, sprite.height);
 
-function clearHighlights() {
-  highlightBoxes.forEach(b => app.stage.removeChild(b));
-  highlightBoxes = [];
+      }
+    }
+  }
 }
