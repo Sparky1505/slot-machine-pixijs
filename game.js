@@ -11,7 +11,6 @@ const app = new PIXI.Application({
 const blurFilter = new PIXI.filters.BlurFilter();
 blurFilter.blur = 5;
 
-
 document.body.appendChild(app.view);
 
 const loadingText = new PIXI.Text('Loading... 0%', {
@@ -71,6 +70,45 @@ app.ticker.add(() => {
   }
 });
 
+function createSymbolContainer(symbolName, x, y, size) {
+  const texture = PIXI.Assets.get(symbolName);
+  const container = new PIXI.Container();
+  const sprite = new PIXI.Sprite(texture);
+  sprite.symbolName = symbolName;
+  sprite.width = size;
+  sprite.height = size;
+
+  const border = new PIXI.Graphics();
+  border.lineStyle(3, 0x000000).drawRect(0, 0, size, size);
+
+  container.addChild(sprite);
+  container.addChild(border);
+  container.x = x;
+  container.y = y;
+  container.width = size;
+  container.height = size;
+  container.border = border;
+
+  return container;
+}
+
+function updateWinText(results, total) {
+  if (!winText) return;
+  winText.text = total > 0
+    ? `Total wins: ${results.length}\n` + results.join('\n')
+    : `Total wins: 0`;
+}
+
+function resetBorders() {
+  for (const row of symbolGrid) {
+    for (const container of row) {
+      container.border.clear();
+      container.border.lineStyle(3, 0x000000);
+      container.border.drawRect(0, 0, container.width, container.height);
+    }
+  }
+}
+
 function showGameScreen() {
   const gridRows = 3;
   const gridCols = 5;
@@ -92,25 +130,9 @@ function showGameScreen() {
       const basePos = currentPositions[col];
       const symbolIndex = (basePos + row) % band.length;
       const symbolName = band[symbolIndex];
-      const texture = PIXI.Assets.get(symbolName);
-
-      const container = new PIXI.Container();
-      const sprite = new PIXI.Sprite(texture);
-      sprite.symbolName = symbolName;
-
-      const border = new PIXI.Graphics();
-      sprite.width = symbolSize;
-      sprite.height = symbolSize;
-      border.lineStyle(3, 0x000000).drawRect(0, 0, symbolSize, symbolSize);
-
-      container.addChild(sprite);
-      container.addChild(border);
-      container.x = startX + col * (symbolSize + spacing);
-      container.y = startY + row * (symbolSize + spacing);
-      container.width = symbolSize;
-      container.height = symbolSize;
-
-      container.border = border;
+      const x = startX + col * (symbolSize + spacing);
+      const y = startY + row * (symbolSize + spacing);
+      const container = createSymbolContainer(symbolName, x, y, symbolSize);
       app.stage.addChild(container);
       rowContainers.push(container);
     }
@@ -197,11 +219,7 @@ function evaluateWins() {
     }
   }
 
-  if (winText) {
-    winText.text = total > 0
-      ? `Total wins: ${results.length}\n` + results.join('\n')
-      : `Total wins: 0`;
-  }
+  updateWinText(results, total);
 }
 
 function showSpinButton(x, y) {
@@ -252,22 +270,21 @@ function spinReels() {
   for (let i = 0; i < currentPositions.length; i++) {
     newPositions[i] = Math.floor(Math.random() * reelset[i].length);
   }
-    for (let row of symbolGrid) {
-    for (let container of row) {
-        container.filters = [blurFilter];
-    }
-    }
-
-  animateReels(newPositions);
-setTimeout(() => {
   for (let row of symbolGrid) {
     for (let container of row) {
-      container.filters = null;
+      container.filters = [blurFilter];
     }
   }
 
-  showGameScreen(); 
-}, 700);
+  animateReels(newPositions);
+  setTimeout(() => {
+    for (let row of symbolGrid) {
+      for (let container of row) {
+        container.filters = null;
+      }
+    }
+    showGameScreen(); 
+  }, 700);
 }
 
 function animateReels(newPositions) {
@@ -306,15 +323,8 @@ function animateReels(newPositions) {
   requestAnimationFrame(updateAnimation);
 }
 
-
 function evaluateScreen() {
-  for (const row of symbolGrid) {
-    for (const container of row) {
-      container.border.clear();
-      container.border.lineStyle(3, 0x000000);
-      container.border.drawRect(0, 0, container.width, container.height);
-    }
-  }
+  resetBorders();
 
   for (let row = 0; row < 3; row++) {
     const symbols = symbolGrid[row].map(container => container.children[0].symbolName);
