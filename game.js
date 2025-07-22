@@ -1,5 +1,7 @@
 console.log("Script test run check");
 let positionText;
+let winText;
+
 const app = new PIXI.Application({
   width: window.innerWidth,
   height: window.innerHeight,
@@ -91,8 +93,9 @@ function showGameScreen() {
 
       const container = new PIXI.Container();
       const sprite = new PIXI.Sprite(texture);
-      const border = new PIXI.Graphics();
+      sprite.symbolName = symbolName;
 
+      const border = new PIXI.Graphics();
       sprite.width = symbolSize;
       sprite.height = symbolSize;
       border.lineStyle(3, 0x000000).drawRect(0, 0, symbolSize, symbolSize);
@@ -128,7 +131,74 @@ function showGameScreen() {
   positionText.y = startY - 40;
   app.stage.setChildIndex(positionText, app.stage.children.length - 1);
 
+  if (!winText) {
+    winText = new PIXI.Text('', {
+      fill: '#ffffff',
+      fontSize: 18,
+      fontFamily: 'Arial',
+      wordWrap: true,
+      wordWrapWidth: app.screen.width - 100
+    });
+    winText.anchor.set(0.5, 0);
+    app.stage.addChild(winText);
+  }
+  winText.x = app.screen.width / 2;
+  winText.y = app.screen.height - 100;
+
   evaluateScreen();
+  evaluateWins();
+}
+
+const paytable = {
+  'hv1_symbol': [20, 50, 100],
+  'hv2_symbol': [18, 45, 90],
+  'hv3_symbol': [16, 40, 80],
+  'hv4_symbol': [14, 35, 70],
+  'lv1_symbol': [10, 25, 50],
+  'lv2_symbol': [8, 20, 40],
+  'lv3_symbol': [6, 15, 30],
+  'lv4_symbol': [4, 10, 20]
+};
+
+const paylines = [
+  [[0,0], [0,1], [0,2], [0,3], [0,4]], 
+  [[1,0], [1,1], [1,2], [1,3], [1,4]], 
+  [[2,0], [2,1], [2,2], [2,3], [2,4]], 
+  [[0,0], [1,1], [2,2], [1,3], [0,4]], 
+  [[2,0], [1,1], [0,2], [1,3], [2,4]]
+];
+
+function evaluateWins() {
+  let total = 0;
+  let results = [];
+
+  for (let i = 0; i < paylines.length; i++) {
+    const line = paylines[i];
+    const symbols = line.map(([r, c]) => symbolGrid[r][c].children[0].symbolName);
+
+    const firstSymbol = symbols[0];
+    let count = 1;
+    for (let j = 1; j < symbols.length; j++) {
+      if (symbols[j] === firstSymbol) {
+        count++;
+      } else {
+        break;
+      }
+    }
+
+    const payoutKey = firstSymbol + '_symbol';
+    if (count >= 3 && paytable[payoutKey]) {
+      const payout = paytable[payoutKey][count - 3];
+      total += payout;
+      results.push(`- payline ${i + 1}, ${payoutKey} x${count}, ${payout}`);
+    }
+  }
+
+  if (winText) {
+    winText.text = total > 0
+      ? `Total wins: ${results.length}\n` + results.join('\n')
+      : `Total wins: 0`;
+  }
 }
 
 function showSpinButton(x, y) {
@@ -190,7 +260,7 @@ function evaluateScreen() {
   }
 
   for (let row = 0; row < 3; row++) {
-    const symbols = symbolGrid[row].map(container => container.children[0].texture.textureCacheIds[0]);
+    const symbols = symbolGrid[row].map(container => container.children[0].symbolName);
     const allSame = symbols.every(sym => sym === symbols[0]);
     if (allSame) {
       for (const container of symbolGrid[row]) {
