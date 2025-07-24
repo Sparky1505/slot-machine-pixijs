@@ -84,7 +84,7 @@ Payouts vary by symbol and number of matches:
 1. Clone the repo:
 
 ```bash
-git clone https://github.com/yourusername/slot-machine-pixijs.git
+git clone https://github.com/Sparky1505/slot-machine-pixijs.git
 cd slot-machine-pixijs
 ```
 
