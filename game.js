@@ -204,30 +204,46 @@ function evaluateWins() {
   let total = 0;
   let results = [];
 
+  resetBorders();
+
   for (let i = 0; i < paylines.length; i++) {
     const line = paylines[i];
-    const symbols = line.map(([r, c]) => symbolGrid[r][c].children[0].symbolName);
+    const firstSymbol = symbolGrid[line[0][0]][line[0][1]].children[0].symbolName;
+    let matchCount = 1;
 
-    const firstSymbol = symbols[0];
-    let count = 1;
-    for (let j = 1; j < symbols.length; j++) {
-      if (symbols[j] === firstSymbol) {
-        count++;
+    for (let j = 1; j < line.length; j++) {
+      const [r, c] = line[j];
+      const currentSymbol = symbolGrid[r][c].children[0].symbolName;
+      if (currentSymbol === firstSymbol) {
+        matchCount++;
       } else {
         break;
       }
     }
 
     const payoutKey = firstSymbol + '_symbol';
-    if (count >= 3 && paytable[payoutKey]) {
-      const payout = paytable[payoutKey][count - 3];
+    if (matchCount >= 3 && paytable[payoutKey]) {
+      const payout = paytable[payoutKey][matchCount - 3];
       total += payout;
-      results.push(`- payline ${i + 1}, ${payoutKey} x${count}, ${payout}`);
+
+      for (let k = 0; k < matchCount; k++) {
+        const [r, c] = line[k];
+        const container = symbolGrid[r][c];
+        container.border.clear();
+        container.border.lineStyle(4, 0xff0000);
+        container.border.drawRect(0, 0, container.width, container.height);
+
+        animateWinSymbol(container.children[0]);
+      }
+
+      results.push(`- payline ${i + 1}, ${payoutKey} x${matchCount}, ${payout}`);
     }
   }
 
   updateWinText(results, total);
 }
+
+
 
 function showSpinButton(x, y) {
   const existing = app.stage.getChildByName("spinBtn");
@@ -293,6 +309,19 @@ function spinReels() {
     showGameScreen(); 
   }, 700);
 }
+function animateWinSymbol(sprite) {
+  let blink = true;
+  let count = 0;
+  const interval = setInterval(() => {
+    sprite.visible = blink;
+    blink = !blink;
+    count++;
+    if (count > 6) {
+      clearInterval(interval);
+      sprite.visible = true;
+    }
+  }, 150);
+}
 
 function animateReels(newPositions) {
   const spinDuration = 1000;
@@ -329,6 +358,7 @@ function animateReels(newPositions) {
 
   requestAnimationFrame(updateAnimation);
 }
+
 
 function evaluateScreen() {
   resetBorders();
