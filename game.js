@@ -94,10 +94,22 @@ function createSymbolContainer(symbolName, x, y, size) {
 
 function updateWinText(results, total) {
   if (!winText) return;
+
   winText.text = total > 0
     ? `Total wins: ${results.length}\n` + results.join('\n')
     : `Total wins: 0`;
+
+  const maxHeight = app.screen.height - winText.y - 20;
+  let fontSize = 18;
+
+  while (fontSize > 12) {
+    winText.style.fontSize = fontSize;
+    if (winText.height <= maxHeight) break;
+    fontSize--;
+  }
 }
+
+
 
 function resetBorders() {
   for (const row of symbolGrid) {
@@ -236,12 +248,13 @@ function evaluateWins() {
         animateWinSymbol(container.children[0]);
       }
 
-      results.push(`- payline ${i + 1}, ${payoutKey} x${matchCount}, ${payout}`);
+      results.push(`- payline ${i + 1}, ${firstSymbol} x${matchCount}, ${payout}`);
     }
   }
 
   updateWinText(results, total);
 }
+
 
 
 
